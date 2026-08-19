@@ -16,6 +16,18 @@
 
 ---
 
+## 📸 Workflow Screenshots
+
+### Complete n8n Automation Canvas (53 Nodes)
+![Workflow Canvas Overview](screenshots/workflow-overview.png)
+*Full canvas view showing the 53-node architecture across all 3 core automation subsystems.*
+
+### Telegram AI Agent Product Image Ingestion & Update
+![Telegram AI Image Agent](screenshots/telegram-image-agent.png)
+*Live demonstration of Telegram bot receiving product imagery, uploading to WordPress Media Library, and updating WooCommerce catalog assets.*
+
+---
+
 ## 🚀 Key Capabilities
 
 The workflow consists of **53 connected nodes across 3 core automation subsystems**:
@@ -107,7 +119,9 @@ woocommerce-ai-automation/
 │   ├── woocommerce-ai-automation.json            # Sanitized public n8n workflow export
 │   └── woocommerce-ai-automation.original.local.json # Local backup (ignored by git)
 ├── screenshots/
-│   └── README.md                                 # Guide & placeholders for UI screenshots
+│   ├── workflow-overview.png                     # Canvas overview screenshot
+│   ├── telegram-image-agent.png                  # Telegram image update capture
+│   └── README.md                                 # Screenshot documentation
 ├── docs/
 │   └── architecture.md                           # Comprehensive architecture and flow diagrams
 ├── README.md                                     # Main documentation
@@ -177,7 +191,7 @@ Agent: "Here is your store inventory: ..."
 
 ### Image Upload Flow
 1. Send an image photo attachment to the Telegram bot with caption:
-   `"Change image for Ergonomic Gaming Chair"`
+   `"update hand picked red chili picture"`
 2. The workflow routes the binary image through the WordPress Media API, retrieves the hosted asset URL, verifies the product ID, and updates the WooCommerce product gallery.
 
 ---
