@@ -11,7 +11,7 @@ This directory is designated for visual walkthroughs and workflow execution capt
 
 | Filename | Expected Content |
 | :--- | :--- |
-| **`workflow-overview.png`** | Full-canvas view of the 53-node n8n workflow showing all 4 subsystems. |
+| **`workflow-overview.png`** | Full-canvas view of the 53-node n8n workflow showing all 3 core automation subsystems. |
 | **`telegram-agent.png`** | Screenshot of Telegram chat interacting with `WooBot` (creating/updating products). |
 | **`woo-commerce-actions.png`** | Screenshot of WooCommerce admin panel showing products created/modified by the AI agent. |
 | **`invoice-flow.png`** | Generated PDF invoice and corresponding customer confirmation email in Gmail. |

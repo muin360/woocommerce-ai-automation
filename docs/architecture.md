@@ -33,11 +33,11 @@ This document details the architecture, node connections, decision flows, and da
 
 ## 2. Subsystem Breakdown & Detailed Workflows
 
-The workflow comprises 53 nodes divided across four core functional pipelines:
+The workflow comprises **53 nodes organized into 3 core automation subsystems**:
 
 ```mermaid
 graph TD
-    subgraph Subsystem 1: Telegram AI Agent & Image Pipeline
+    subgraph Subsystem 1: Telegram AI Store Management & Image Automation
         TG_TRIG[Telegram Trigger] --> SW[Switch: Text vs Image]
         SW -- Text Message --> AG1[AI Agent: WooBot]
         SW -- Image Upload --> HTTP_WP[HTTP Request: WP Media Upload]
@@ -50,7 +50,7 @@ graph TD
         AG_IMG --> TG_RESP2[Send Confirmation to User]
     end
 
-    subgraph Subsystem 2: Order Processing & Invoicing
+    subgraph Subsystem 2: WooCommerce Order Processing & Invoicing
         WC_TRIG[WooCommerce Trigger: order.created] --> FMT[Set: Format Data]
         FMT --> INV_CODE[Code: HTML Invoice Template]
         INV_CODE --> PDF_CONV[HTML/CSS to PDF]
@@ -63,7 +63,7 @@ graph TD
         GS_CUST --> GS_ORD[Google Sheets: Append Order Record]
     end
 
-    subgraph Subsystem 3: Sales Reporting Branches
+    subgraph Subsystem 3: Sales Analytics & Reporting
         MAN_TRIG[Manual Trigger] --> WC_ORD0[WooCommerce: Get Orders]
         WC_ORD0 --> JS_REP0[Code: Aggregate Metrics]
         JS_REP0 --> AG_REP0[AI Agent: Daily Sales Analyst]
@@ -90,7 +90,7 @@ graph TD
 
 ## 3. Component Deep Dive
 
-### Subsystem 1: Telegram Store Management Agent & Image Handler
+### Subsystem 1: Telegram AI Store Management & Image Automation
 
 ```text
 Telegram Message
@@ -128,7 +128,7 @@ Telegram Message
 
 ---
 
-### Subsystem 2: Order Automation & Invoice Pipeline
+### Subsystem 2: WooCommerce Order Processing & Invoicing
 
 ```text
 WooCommerce Order Created (Webhook)
@@ -139,7 +139,7 @@ WooCommerce Order Created (Webhook)
       │
       ▼
 [ Invoice Template (JavaScript Code Node) ]
-  • Dynamically compiles structured HTML/CSS invoice table with line items, tax, and totals
+  • Dynamically compiles structured HTML/CSS invoice table with itemized products, quantities, prices, and order totals
       │
       ▼
 [ Convert HTML to PDF (htmlcsstopdf API) ]
@@ -168,7 +168,7 @@ WooCommerce Order Created (Webhook)
 
 ---
 
-### Subsystem 3: Sales Analytics & Reporting Pipeline
+### Subsystem 3: Sales Analytics & Reporting
 
 ```text
 Trigger (Manual or Scheduled Interval)
@@ -189,6 +189,8 @@ Trigger (Manual or Scheduled Interval)
 [ Telegram Node: Admin Delivery ]
   • Formats and posts the executive briefing directly into the admin's Telegram channel
 ```
+
+> **Reporting Scope Note**: All reporting branches in the workflow query orders created starting from `00:00:00` of the current day (`new Date().toISOString().split('T')[0] + 'T00:00:00'`). Each branch summarizes current day metrics at scheduled trigger times; dynamic historical multi-day range calculation is planned for future iterations.
 
 ---
 

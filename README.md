@@ -2,8 +2,8 @@
 
 > **Project Type**: Course Assignment / Learning Project  
 > **Status**: Educational Demonstration / Open Source Portfolio  
-> **Workflow Nodes**: 53 Nodes  
-> **Author / Maintainer**: Open Source Contributor  
+> **Workflow Nodes**: 53 Nodes across 3 Core Automation Subsystems  
+> **Author / Maintainer**: Arefin Mueen  
 
 ---
 
@@ -12,45 +12,46 @@
 **WooCommerce AI Automation** is an end-to-end e-commerce automation and store-assistant system built with [n8n](https://n8n.io/). Created as a comprehensive **course assignment and learning project**, this workflow connects Telegram, WooCommerce, OpenAI, Google Sheets, Google Drive, Gmail, and scheduled reporting engines to automate everyday store management, customer order fulfillment, invoice generation, and sales intelligence.
 
 > [!NOTE]
-> This project is designed as an educational prototype and learning project. It is **not** a production client deployment and should be evaluated and adapted accordingly.
+> This project is designed as an educational demonstration and learning project. It is **not** a production client deployment and should be evaluated and adapted accordingly.
 
 ---
 
 ## 🚀 Key Capabilities
 
-Based on the 53 connected nodes across 4 dedicated subsystems, the automation provides:
+The workflow consists of **53 connected nodes across 3 core automation subsystems**:
 
-### 1. 🤖 AI Store Management Agent (`WooBot`)
-Operates directly inside Telegram to process natural language commands (supporting **English, Bangla, and Banglish**):
-- **Create Products**: Automatically validates required parameters (name, regular price, sale price, stock quantity, description).
-- **Update Products**: Context-aware updates to existing items (stock adjustments, price changes) without overwriting unmodified fields.
-- **Delete Products**: Safe deletion of products with ID confirmation.
-- **Search & Get Products**: Fetches real-time price, SKU, and inventory levels.
-- **List Catalog**: Returns formatted catalog summaries directly into Telegram chat.
-- **Entity & Reference Resolution**: Intelligently resolves products from context references (e.g., *"the last one"*, *"same item"*, partial names).
-- **Conversation Memory**: Multi-turn conversational buffer scoped per Telegram user.
+### 1. 🤖 Telegram AI Store Management & Image Automation
+Operates directly inside Telegram to process natural language commands (supporting **English, Bangla, and Banglish**) and handle image assets:
+- **AI Catalog Assistant (`WooBot`)**:
+  - **Create Products**: Automatically validates required parameters (name, regular price, sale price, stock quantity, description).
+  - **Update Products**: Context-aware updates to existing items (stock adjustments, price changes) without overwriting unmodified fields.
+  - **Delete Products**: Safe deletion of products with ID confirmation.
+  - **Search & Get Products**: Fetches real-time price, SKU, and inventory levels.
+  - **List Catalog**: Returns clean, formatted catalog summaries directly into Telegram chat.
+  - **Entity & Reference Resolution**: Intelligently resolves products from conversational references (e.g., *"the last one"*, *"same item"*, partial names).
+  - **Conversation Memory**: Multi-turn conversational buffer window scoped per Telegram user.
+- **Product Image Ingestion & Resolution Pipeline**:
+  - Ingests image attachments sent directly via Telegram.
+  - Uploads images to WordPress Media Library via the WordPress REST API.
+  - Extracts hosted public URLs and routes to a specialized **Image Update Agent** to bind the new image to the targeted product catalog entry.
 
-### 2. 🖼️ Product Image Ingestion & Resolution Pipeline
-- Ingests image attachments directly sent via Telegram.
-- Uploads images to WordPress Media Library via the WordPress REST API.
-- Extracts hosted public URLs and triggers a specialized **Image Update Agent** to bind the new image to the targeted product catalog entry.
-
-### 3. 📦 Autonomous Order Fulfillment & Invoicing
-Listens to real-time WooCommerce `order.created` webhooks:
-- **Data Transformation**: Extracts and normalizes customer and line-item records.
-- **Dynamic HTML/CSS Invoicing**: Generates a branded, responsive invoice document with itemized tables and BDT currency formatting.
+### 2. 📦 WooCommerce Order Processing & Invoicing
+Listens to real-time WooCommerce `order.created` webhooks to execute automated post-purchase operations:
+- **Data Transformation**: Extracts and normalizes customer profile and line-item records.
+- **Dynamic HTML/CSS Invoicing**: Generates a branded, responsive invoice document with itemized products, quantities, prices, and order totals in BDT.
 - **Serverless PDF Generation**: Converts HTML into standard A4 PDF invoices.
 - **Cloud Archival**: Saves generated invoices directly into a dedicated Google Drive folder (`Invoice-{order_id}.pdf`).
 - **Automated Customer Email**: Sends a branded transactional confirmation email via Gmail with the PDF invoice attached.
 - **Instant Admin Notification**: Dispatches rich Telegram alerts to store management with order IDs, customer details, and action checklists.
 - **Two-Way Google Sheets Sync**:
   - Upserts customer CRM profiles (matching by email).
-  - Appends detailed order line items to the `Orders` ledger sheet.
+  - Appends detailed order records with line items to the `Orders` ledger sheet.
 
-### 4. 📊 Sales Intelligence & Executive Reporting
-- **Multi-Schedule Triggers**: Configured for on-demand execution (Manual Trigger) and recurring scheduled intervals.
-- **Automated Aggregation**: Calculates daily order counts, gross revenue (BDT), line-item volumes, and identifying top-selling items.
-- **AI Sales Briefings**: Uses OpenAI (`gpt-4o-mini`) to analyze performance trends, business insights, and generate actionable recommendations formatted for Telegram.
+### 3. 📊 Sales Analytics & Reporting
+Provides scheduled and on-demand executive sales performance briefings:
+- **Multi-Branch Execution**: Configured for on-demand execution (Manual Trigger) and recurring scheduled intervals (daily, weekly, and monthly branches).
+- **Automated Aggregation**: Aggregates order volume, gross revenue (BDT), line-item counts, and identifies top-selling products.
+- **AI Sales Briefings**: Uses OpenAI (`gpt-4o-mini`) to analyze performance metrics, extract business insights, and generate actionable recommendations formatted for Telegram.
 
 ---
 
@@ -79,7 +80,7 @@ Listens to real-time WooCommerce `order.created` webhooks:
 └─────────────────────────────────────────────────────────┘
 ```
 
-> For comprehensive architecture breakdowns, node graphs, and sub-pipeline diagrams, see [**`docs/architecture.md`**](docs/architecture.md).
+> For comprehensive architecture breakdowns, node graphs, and subsystem diagrams, see [**`docs/architecture.md`**](docs/architecture.md).
 
 ---
 
@@ -188,8 +189,8 @@ In accordance with transparent engineering documentation, the following design c
 1. **Date Range Filtering in Reporting Branches**:
    - The workflow contains 4 reporting branches (Manual, Scheduled Monthly, and Scheduled Weekly triggers).
    - In all branches, the WooCommerce order query is filtered with `after: today 00:00:00` (`new Date().toISOString().split('T')[0] + 'T00:00:00'`).
-   - Consequently, each branch currently aggregates **today's incoming orders** rather than multi-week or multi-month historical windows.
-   - *TODO for future version*: Implement dynamic ISO timestamp offsets (e.g. `now - 7 days` or `now - 30 days`) for true historical multi-day analytics.
+   - Consequently, each reporting branch currently aggregates **today's incoming orders** rather than multi-week or multi-month historical windows.
+   - *TODO for future version*: Implement dynamic ISO timestamp offsets (e.g., `now - 7 days` or `now - 30 days`) for true historical multi-day analytics.
 
 2. **Image Ingestion Domain Tunneling**:
    - For local development setups (e.g., LocalWP / Docker), public image URLs require an external tunnel (such as ngrok or Cloudflare Tunnels) for WooCommerce to fetch media attachments.
