@@ -1,0 +1,39 @@
+# Environment & Configuration
+.env
+.env.*
+*.env
+*.secret
+credentials.json
+config.local.json
+
+# Root un-sanitized file (original preserved in workflow/*.original.local.json)
+/woocommerce-ai-automation.json
+
+# Local & Private Workflow Backups (MUST NEVER BE COMMITTED)
+*.local.json
+*.original.local.json
+private/
+exports/private/
+backups/
+
+# Dependencies & Package Managers
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Python & Temporary Files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+ENV/
+*.tmp
+*.log
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+desktop.ini

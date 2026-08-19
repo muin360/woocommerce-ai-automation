@@ -1,0 +1,1997 @@
+{
+  "name": "WooCommerce AI Store Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {
+          "download": true
+        }
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -352,
+        -2032
+      ],
+      "id": "07f8a1aa-acbc-4461-8d5e-b31c157d0750",
+      "name": "Telegram Trigger",
+      "webhookId": "YOUR_TELEGRAM_WEBHOOK_ID",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=User message:\n{{ $json.message.text || \"\" }} \n{{ $('Telegram Trigger').item.json.message.caption }}\n\n",
+        "options": {
+          "systemMessage": "=# ROLE\nYou are WooBot, an AI WooCommerce Store Management Agent operating through Telegram.\nYou exclusively manage products in a WooCommerce store using the tools provided to you.\nYou are NOT a general-purpose chatbot — stay strictly within your operational scope.\n\n# CAPABILITIES\nYou can perform exactly 5 operations, each mapped to one tool:\n1. CREATE_PRODUCT   → \"Create a product in WooCommerce\"\n2. UPDATE_PRODUCT   → \"Update a product in WooCommerce\"\n3. DELETE_PRODUCT   → \"Delete a product in WooCommerce\"\n4. GET_PRODUCT       → \"Get a product in WooCommerce\"\n5. LIST_PRODUCTS     → \"Get many products in WooCommerce\"\n\nNever attempt actions outside these 5 operations. If asked for anything else\n(discounts, coupons, orders, shipping, refunds, etc.), reply that it is\noutside your current scope.\n\n# CORE PRINCIPLES (non-negotiable)\n- NEVER invent: Product ID, name, price, stock, category, or image URL.\n- NEVER guess store data. If unknown, search first, or ask the user.\n- NEVER expose internal details: tool names, JSON, APIs, or workflow logic.\n- NEVER call more than one tool per user request unless a search-then-act\n  sequence is required (see PRODUCT RESOLUTION below).\n- ALWAYS reply in the same language the user used (Bangla / Banglish / English).\n- Keep replies short, clear, and store-assistant-like — no over-explaining.\n\n# PRODUCT RESOLUTION (when Product ID is missing)\n1. Search using \"Get many products in WooCommerce\" or context memory.\n2. Match by exact name → partial name → conversation reference\n   (e.g. \"this one\", \"last product\", \"same one\").\n3. Decision rule:\n   - Exactly 1 match  → proceed automatically.\n   - 2+ matches        → ask user to clarify which product.\n   - 0 matches          → tell user no product was found. Do not proceed.\n\n# OPERATION RULES\n\n## CREATE\nTrigger words: create, add, upload, publish, insert, launch.\nRequired: Name, Regular Price.\nOptional: Sale Price, Stock Quantity, Description, SKU, Image.\n- Ask ONLY for missing required fields.\n- Validate: name non-empty, price numeric, stock integer.\n- Never call Create twice for one request (prevents duplicate products).\n- On failure: explain briefly, wait for user confirmation before retrying.\n\n## UPDATE\nTrigger words: update, edit, modify, change, rename, increase/decrease stock,\nchange price, change image.\n- Resolve Product ID first (see PRODUCT RESOLUTION).\n- Send ONLY the fields the user explicitly mentioned. Never resend unrelated\n  or existing fields, never send empty strings, never add defaults.\n  Example — \"Increase Gaming Chair stock to 20\" → send only:\n  Product_ID, Stock_Quantity. Nothing else.\n\n## DELETE\nTrigger words: delete, remove, erase.\n- Resolve Product ID first. Never delete on assumption.\n\n## GET\nTrigger words: check price/stock, product details, product status.\nPresent clearly:\n  Product: <name>\n  Price: ৳<price>\n  Stock: <stock>\n\n## LIST\nTrigger words: show/list products, inventory, all products.\nPresent as a clean, scannable list (name — price — stock).\n\n# IMAGE HANDLING\nIf an image_url is available in context (already hosted), use it directly as\nimagesValues0_Src for Create/Update. Never ask the user for an image URL if\none already exists. If none exists, omit the image field entirely.\n\n# TOOL EXECUTION FLOW\n1. Identify intent → map to ONE of the 5 operations.\n2. Collect only required info (ask only what's missing).\n3. Resolve Product ID via search if needed.\n4. Call exactly one appropriate tool.\n5. Wait for the tool result before responding.\n6. Confirm briefly to the user (✅ style), or explain the error if it failed.\nNever retry a failed action automatically — ask the user first.\n\n# RESPONSE FORMAT\n- Short, friendly, no technical jargon.\n- Confirmations use a checkmark + key details only.\n  Example: \"✅ Stock updated — Gaming Chair now has 20 units.\"\n\n# CONTEXT\nImage URL (if provided): {{ $json.image_url || \"\" }}\n\n\"If user's request is about updating/changing a product image, do NOT call any tool. Instead, output exactly: [##IMAGE_UPDATE## + {Product_Name:(Produc_name)} + {exact product_id:id}] and nothing else.\"\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        864,
+        -2144
+      ],
+      "id": "e5b7b989-13da-4869-8cd0-30d9a28e3acd",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        544,
+        -1920
+      ],
+      "id": "49a13739-3a27-43df-9cda-109465dbd92f",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "YOUR_OPENAI_CREDENTIAL_ID",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "auto",
+        "resource": "product",
+        "operation": "create",
+        "name": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Name', ``, 'string') }}",
+        "additionalFields": {
+          "description": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Description', ``, 'string') }}",
+          "manageStock": true,
+          "regularPrice": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Regular_Price', ``, 'string') }}",
+          "salePrice": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Sale_Price', ``, 'string') }}",
+          "stockQuantity": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Stock_Quantity', ``, 'number') }}"
+        },
+        "dimensionsUi": {},
+        "imagesUi": {
+          "imagesValues": [
+            {
+              "alt": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('imagesValues0_Alt', ``, 'string') }}",
+              "src": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('imagesValues0_Src', ``, 'string') }}",
+              "name": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('imagesValues0_Name', ``, 'string') }}"
+            }
+          ]
+        },
+        "metadataUi": {
+          "metadataValues": [
+            {
+              "key": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('metadataValues0_Key', ``, 'string') }}",
+              "value": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('metadataValues0_Value', ``, 'string') }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.wooCommerceTool",
+      "typeVersion": 1,
+      "position": [
+        800,
+        -1920
+      ],
+      "id": "f8c32f20-6520-4828-bc6c-8eb4c694e7b1",
+      "name": "Create a product in WooCommerce",
+      "credentials": {
+        "wooCommerceApi": {
+          "id": "YOUR_WOOCOMMERCE_CREDENTIAL_ID",
+          "name": "WooCommerce account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "auto",
+        "resource": "product",
+        "operation": "update",
+        "productId": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Product_ID', ``, 'string') }}",
+        "updateFields": {
+          "regularPrice": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Regular_Price', ``, 'string') }}",
+          "salePrice": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Sale_Price', ``, 'string') }}",
+          "stockQuantity": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Stock_Quantity', ``, 'number') }}"
+        },
+        "dimensionsUi": {},
+        "imagesUi": {},
+        "metadataUi": {
+          "metadataValues": []
+        }
+      },
+      "type": "n8n-nodes-base.wooCommerceTool",
+      "typeVersion": 1,
+      "position": [
+        928,
+        -1920
+      ],
+      "id": "981d3d83-df16-4176-a735-2a421c9d6d55",
+      "name": "Update a product in WooCommerce",
+      "credentials": {
+        "wooCommerceApi": {
+          "id": "YOUR_WOOCOMMERCE_CREDENTIAL_ID",
+          "name": "WooCommerce account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "productId": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Product_ID', ``, 'string') }}"
+      },
+      "type": "n8n-nodes-base.wooCommerceTool",
+      "typeVersion": 1,
+      "position": [
+        1056,
+        -1920
+      ],
+      "id": "7643da40-b858-4ba5-9e34-f1d111db72c1",
+      "name": "Delete a product in WooCommerce",
+      "credentials": {
+        "wooCommerceApi": {
+          "id": "YOUR_WOOCOMMERCE_CREDENTIAL_ID",
+          "name": "WooCommerce account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "contextWindowLength": 100
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        672,
+        -1920
+      ],
+      "id": "8879f08f-e9f2-4c2c-ac5f-2539a3aa702f",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "productId": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Product_ID', ``, 'string') }}"
+      },
+      "type": "n8n-nodes-base.wooCommerceTool",
+      "typeVersion": 1,
+      "position": [
+        1184,
+        -1920
+      ],
+      "id": "c1b98997-d330-45c9-8c7f-b7d733e65af4",
+      "name": "Get a product in WooCommerce",
+      "credentials": {
+        "wooCommerceApi": {
+          "id": "YOUR_WOOCOMMERCE_CREDENTIAL_ID",
+          "name": "WooCommerce account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json.output }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1808,
+        -1888
+      ],
+      "id": "7785e09f-b3a2-4f90-b6ec-39ee55af6b86",
+      "name": "Send a text message",
+      "webhookId": "YOUR_WEBHOOK_ID",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://YOUR-WORDPRESS-SITE.com/wp-json/wp/v2/media",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Disposition",
+              "value": "attachment; filename=\"product-image.jpg\""
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "data",
+        "options": {
+          "redirect": {
+            "redirect": {}
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        96,
+        -1968
+      ],
+      "id": "3cb00c58-0134-4300-9f3d-4bc38f82d565",
+      "name": "HTTP Request",
+      "alwaysOutputData": false,
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "YOUR_WORDPRESS_BASIC_AUTH_CREDENTIAL_ID",
+          "name": "WordPress Basic Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "returnAll": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.wooCommerceTool",
+      "typeVersion": 1,
+      "position": [
+        1312,
+        -1920
+      ],
+      "id": "81e98563-8a3e-4493-a513-2dfbff260beb",
+      "name": "Get many products in WooCommerce",
+      "credentials": {
+        "wooCommerceApi": {
+          "id": "YOUR_WOOCOMMERCE_CREDENTIAL_ID",
+          "name": "WooCommerce account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const imageUrl = $json.source_url;\n\n// If running a local WordPress instance behind ngrok/Cloudflare tunnel,\n// replace local development URL with public-facing URL:\nconst publicUrl = imageUrl.replace(\n  \"https://your-local-site.local\",\n  \"https://YOUR-PUBLIC-WORDPRESS-DOMAIN.com\"\n);\n\nreturn {\n  image_url: publicUrl\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        -1968
+      ],
+      "id": "7a5a02d2-d0ef-4686-ae35-efca7eedcfb1",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "event": "order.created"
+      },
+      "type": "n8n-nodes-base.wooCommerceTrigger",
+      "typeVersion": 1,
+      "position": [
+        -352,
+        -1664
+      ],
+      "id": "ff036360-a37f-41bf-8e9a-6af7ba86e31e",
+      "name": "WooCommerce Trigger",
+      "webhookId": "YOUR_WOOCOMMERCE_WEBHOOK_ID",
+      "credentials": {
+        "wooCommerceApi": {
+          "id": "YOUR_WOOCOMMERCE_CREDENTIAL_ID",
+          "name": "WooCommerce account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "73fe7209-37bf-4238-97e1-a67b321384ae",
+              "name": "order_id",
+              "value": "={{ $json.id }}",
+              "type": "number"
+            },
+            {
+              "id": "34dc58b3-f18e-4f64-bce7-ad9a37701b8f",
+              "name": "customer_name",
+              "value": "={{$json.billing.first_name}} {{$json.billing.last_name}}",
+              "type": "string"
+            },
+            {
+              "id": "e931528b-1333-4423-9d24-bceed06cbeec",
+              "name": "customer_email",
+              "value": "={{$json.billing.email}}",
+              "type": "string"
+            },
+            {
+              "id": "f2546367-5923-48a9-9e44-bf145491685b",
+              "name": "phone",
+              "value": "={{ $json.billing.phone }}",
+              "type": "string"
+            },
+            {
+              "id": "23637de3-fab0-4df7-9654-077ccf1ff0ab",
+              "name": "address",
+              "value": "={{$json.billing.address_1}}",
+              "type": "string"
+            },
+            {
+              "id": "24213a5d-92ba-4330-b97e-816ca1604a0b",
+              "name": "total",
+              "value": "={{ $json.total }}",
+              "type": "string"
+            },
+            {
+              "id": "78089569-ba43-463e-ac0e-bf5cb6c978d9",
+              "name": "payment_method",
+              "value": "={{ $json.payment_method_title }}",
+              "type": "string"
+            },
+            {
+              "id": "3430f9d8-cd75-41a9-9ad7-6a72151bb375",
+              "name": "products",
+              "value": "={{$json.line_items}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -128,
+        -1664
+      ],
+      "id": "f2268e71-521f-46bf-90fb-e61d03b8be24",
+      "name": "format data"
+    },
+    {
+      "parameters": {
+        "jsCode": "const order = $json;\n\n// Handle products safely\nconst productsData = typeof order.products === \"string\"\n  ? JSON.parse(order.products)\n  : order.products || [];\n\n// Currency formatter\nconst formatMoney = (amount) => {\n  return Number(amount).toLocaleString(\"en-US\", {\n    minimumFractionDigits: 2,\n    maximumFractionDigits: 2\n  });\n};\n\n// Generate product rows\nconst products = productsData.map(product => `\n<tr>\n  <td>${product.name || \"Product\"}</td>\n  <td class=\"center\">${product.quantity || 0}</td>\n  <td>BDT ${formatMoney(product.price)}</td>\n  <td>BDT ${formatMoney(product.total)}</td>\n</tr>\n`).join(\"\");\n\n\n// Current date\nconst invoiceDate = new Date().toLocaleDateString(\"en-GB\");\n\n\nconst html = `\n<!DOCTYPE html>\n<html>\n\n<head>\n\n<meta charset=\"UTF-8\">\n\n<style>\n\n@page {\n  size: A4;\n  margin: 20mm;\n}\n\nbody {\n  font-family: Arial, Helvetica, sans-serif;\n  color: #333;\n  margin: 0;\n  padding: 0;\n}\n\n.invoice {\n  width: 100%;\n  max-width: 800px;\n  margin: auto;\n}\n\n\n.header {\n  text-align: center;\n  margin-bottom: 30px;\n}\n\n\n.header h1 {\n  font-size: 32px;\n  margin: 0;\n}\n\n\n.header p {\n  margin: 5px 0;\n  color: #666;\n}\n\n\n\n.info {\n  margin-bottom: 30px;\n  font-size: 14px;\n}\n\n\n.info p {\n  margin: 5px 0;\n}\n\n\n\ntable {\n\n  width:100%;\n  border-collapse:collapse;\n  margin-top:20px;\n\n}\n\n\nth {\n\n  background:#f3f3f3;\n  font-weight:bold;\n\n}\n\n\nth, td {\n\n  border:1px solid #ddd;\n  padding:12px;\n  font-size:14px;\n\n}\n\n\n.center {\n\n  text-align:center;\n\n}\n\n\n.total-box {\n\n  margin-top:25px;\n  text-align:right;\n  font-size:22px;\n  font-weight:bold;\n\n}\n\n\n.payment {\n\n  margin-top:20px;\n  font-size:14px;\n\n}\n\n\n.footer {\n\n  margin-top:60px;\n  text-align:center;\n  font-size:12px;\n  color:#777;\n\n}\n\n\n</style>\n\n</head>\n\n\n<body>\n\n\n<div class=\"invoice\">\n\n\n<div class=\"header\">\n\n<h1>INVOICE</h1>\n\n<p>AI Ecommerce</p>\n\n</div>\n\n\n\n<div class=\"info\">\n\n\n<p>\n<b>Invoice ID:</b> #${order.order_id}\n</p>\n\n\n<p>\n<b>Date:</b> ${invoiceDate}\n</p>\n\n\n<p>\n<b>Customer:</b> ${order.customer_name || \"N/A\"}\n</p>\n\n\n<p>\n<b>Email:</b> ${order.customer_email || \"N/A\"}\n</p>\n\n\n<p>\n<b>Address:</b> ${order.address || \"N/A\"}\n</p>\n\n\n</div>\n\n\n\n\n<table>\n\n\n<tr>\n\n<th>Product</th>\n\n<th>Quantity</th>\n\n<th>Price</th>\n\n<th>Total</th>\n\n</tr>\n\n\n${products}\n\n\n</table>\n\n\n\n<div class=\"total-box\">\n\nTotal Amount: BDT ${formatMoney(order.total)}\n\n</div>\n\n\n\n<div class=\"payment\">\n\n<b>Payment Method:</b> ${order.payment_method || \"N/A\"}\n\n</div>\n\n\n\n<div class=\"footer\">\n\nThank you for your purchase ❤️\n\n</div>\n\n\n\n</div>\n\n\n</body>\n\n</html>\n`;\n\n\n\nreturn [\n  {\n    json: {\n      invoice_html: html,\n      order_id: order.order_id,\n      customer_email: order.customer_email\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        -1664
+      ],
+      "id": "b5abeefb-f2e6-4d77-a1ec-10207b3800a1",
+      "name": "INOICE TEMPLATE"
+    },
+    {
+      "parameters": {
+        "html_content": "={{ $json.invoice_html }}",
+        "css_content": "@page {   size: A4;   margin: 15mm; }  * {   box-sizing: border-box; }  body {   font-family: Arial, Helvetica, sans-serif;   color: #333;   margin: 0;   padding: 0;   background: #fff; }  .invoice {   width: 100%;   min-height: 100%;   padding: 20px;   border: 1px solid #ddd; }  h1 {   text-align: center;   font-size: 28px;   margin-bottom: 30px; }  p {   font-size: 14px;   line-height: 1.5; }  table {   width: 100%;   border-collapse: collapse;   margin-top: 25px; }  th {   background: #f5f5f5;   font-weight: bold; }  th, td {   border: 1px solid #ddd;   padding: 10px;   text-align: left;   font-size: 14px; }  .total {   text-align: right;   font-size: 20px;   font-weight: bold;   margin-top: 25px; }  .footer {   margin-top: 50px;   text-align: center;   font-size: 12px; }"
+      },
+      "type": "n8n-nodes-htmlcsstopdf.htmlcsstopdf",
+      "typeVersion": 1,
+      "position": [
+        320,
+        -1664
+      ],
+      "id": "55fb3d27-8249-4826-8c4c-bd146fe52ecc",
+      "name": "Convert HTML to PDF",
+      "credentials": {
+        "htmlcsstopdfApi": {
+          "id": "YOUR_HTMLCSSTOPDF_CREDENTIAL_ID",
+          "name": "HTML to PDF account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.pdf_url }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        544,
+        -1664
+      ],
+      "id": "0f42ec93-1d23-4ee9-8d6c-2b795a13483d",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "inputDataFieldName": "=data",
+        "name": "=Invoice-{{ $('format data').item.json.order_id }}.pdf",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_DRIVE_FOLDER_ID",
+          "mode": "list",
+          "cachedResultName": "INVOICE",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/YOUR_GOOGLE_DRIVE_FOLDER_ID"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        768,
+        -1664
+      ],
+      "id": "8dc86e05-d0f5-406f-826a-6f1bdf68458c",
+      "name": "Upload file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "YOUR_GOOGLE_DRIVE_CREDENTIAL_ID",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('format data').item.json.customer_email }}",
+        "subject": "=Order Successfull - Order #{{ $('format data').item.json.order_id }}",
+        "message": "=<div style=\"font-family: Arial, Helvetica, sans-serif; max-width:650px; margin:auto; background:#ffffff; color:#333333; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;\">\n\n  <!-- Header -->\n  <div style=\"background:#111827; padding:35px 30px; text-align:center;\">\n\n    <h1 style=\"margin:0; font-size:30px; color:#ffffff; font-weight:700;\">\n      AI Ecommerce\n    </h1>\n\n    <p style=\"margin:10px 0 0; font-size:15px; color:#d1d5db;\">\n      Order Confirmation\n    </p>\n\n  </div>\n\n\n  <!-- Content -->\n  <div style=\"padding:35px 30px;\">\n\n\n    <!-- Status -->\n    <div style=\"text-align:center; margin-bottom:25px;\">\n\n      <span style=\"display:inline-block; background:#dcfce7; color:#166534; padding:8px 18px; border-radius:20px; font-size:14px; font-weight:bold;\">\n        ✓ Order Confirmed Successfully\n      </span>\n\n    </div>\n\n\n\n    <h2 style=\"font-size:22px; color:#111827; margin-bottom:15px;\">\n      Hello {{ $('format data').item.json.customer_name }},\n    </h2>\n\n\n\n    <p style=\"font-size:15px; line-height:1.7; color:#4b5563;\">\n      Thank you for choosing AI Ecommerce.\n      We have successfully received your order and our team is now preparing it for processing.\n    </p>\n\n\n    <p style=\"font-size:15px; line-height:1.7; color:#4b5563;\">\n      You will receive another notification once your order has been shipped.\n      Please keep this email for future reference.\n    </p>\n\n\n\n    <!-- Order Summary -->\n\n    <div style=\"margin-top:30px; background:#f9fafb; border:1px solid #e5e7eb; border-radius:10px; padding:20px;\">\n\n\n      <h3 style=\"margin:0 0 15px; color:#111827; font-size:18px;\">\n        Order Summary\n      </h3>\n\n\n      <table style=\"width:100%; border-collapse:collapse; font-size:14px;\">\n\n\n        <tr>\n          <td style=\"padding:10px 0; color:#6b7280;\">\n            Order ID\n          </td>\n\n          <td style=\"padding:10px 0; text-align:right; font-weight:bold; color:#111827;\">\n            #{{ $('format data').item.json.order_id }}\n          </td>\n        </tr>\n\n\n        <tr>\n          <td style=\"padding:10px 0; color:#6b7280;\">\n            Total Amount\n          </td>\n\n          <td style=\"padding:10px 0; text-align:right; font-weight:bold; color:#111827;\">\n            BDT {{ $('format data').item.json.total }}\n          </td>\n        </tr>\n\n\n        <tr>\n          <td style=\"padding:10px 0; color:#6b7280;\">\n            Payment Method\n          </td>\n\n          <td style=\"padding:10px 0; text-align:right; font-weight:bold; color:#111827;\">\n            {{ $('format data').item.json.payment_method }}\n          </td>\n        </tr>\n\n\n      </table>\n\n\n    </div>\n\n\n\n\n    <!-- Invoice -->\n\n    <div style=\"margin-top:25px; background:#eff6ff; border-left:4px solid #2563eb; padding:15px; border-radius:6px;\">\n\n\n      <p style=\"margin:0; font-size:14px; line-height:1.6; color:#1e40af;\">\n        Your invoice has been generated successfully.\n        We have attached the PDF invoice with this email.\n        Please save it for your records.\n      </p>\n\n\n    </div>\n\n\n\n\n    <!-- Support -->\n\n    <div style=\"margin-top:30px;\">\n\n\n      <p style=\"font-size:15px; line-height:1.6; color:#4b5563;\">\n        If you have any questions about your order,\n        our support team will be happy to help you.\n      </p>\n\n\n      <p style=\"font-size:15px; margin-top:20px;\">\n        Thanks,<br>\n        <strong>AI Ecommerce Team</strong>\n      </p>\n\n\n    </div>\n\n\n  </div>\n\n\n\n\n  <!-- Footer -->\n\n  <div style=\"background:#f9fafb; border-top:1px solid #e5e7eb; padding:20px; text-align:center;\">\n\n\n    <p style=\"margin:0; font-size:13px; color:#6b7280;\">\n      Thank you for shopping with AI Ecommerce\n    </p>\n\n\n    <p style=\"margin:10px 0 0; font-size:12px; color:#9ca3af;\">\n      © 2026 AI Ecommerce. All rights reserved.\n    </p>\n\n\n  </div>\n\n\n</div>",
+        "options": {
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {}
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1216,
+        -1664
+      ],
+      "id": "5ee0eb17-e5e3-46f4-8c14-1bed0dba64a8",
+      "name": "Send a message",
+      "webhookId": "YOUR_WEBHOOK_ID",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_GMAIL_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.webViewLink }}",
+          "mode": "url"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        992,
+        -1664
+      ],
+      "id": "eb271f20-e317-4c1d-90d8-9714fc0d4d0b",
+      "name": "Download file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "YOUR_GOOGLE_DRIVE_CREDENTIAL_ID",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_ADMIN_CHAT_ID",
+        "text": "=🚨 NEW ORDER ALERT 🚨\n\n🏪 AI Ecommerce\n━━━━━━━━━━━━━━━━\n\n📦 ORDER INFORMATION\n\n🆔 Order ID:\n#{{ $('format data').item.json.order_id }}\n\n📅 Order Time:\n{{ new Date().toLocaleString() }}\n\n💰 Total:\nBDT {{ $('format data').item.json.total }}\n\n💳 Payment:\n{{ $('format data').item.json.payment_method }}\n\n\n━━━━━━━━━━━━━━━━\n\n👤 CUSTOMER DETAILS\n\n👨 Name:\n{{ $('format data').item.json.customer_name }}\n\n📧 Email:\n{{ $('format data').item.json.customer_email }}\n\n📱 Phone:\n{{ $('format data').item.json.phone }}\n\n📍 Address:\n{{ $('format data').item.json.address }}\n\n\n━━━━━━━━━━━━━━━━\n\n🛒 ORDER ITEMS\n\n#{{ $('WooCommerce Trigger').item.json.line_items[0].product_id }}\n{{ $('WooCommerce Trigger').item.json.line_items[0].name }} x {{ $('WooCommerce Trigger').item.json.line_items[0].quantity }}\n\n━━━━━━━━━━━━━━━━\n\n⚡ ADMIN ACTION\n\n☑️ Verify order\n☑️ Check stock availability\n☑️ Prepare shipment\n☑️ Update order status\n\n\n🤖 AI Ecommerce Automation",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1440,
+        -1664
+      ],
+      "id": "5057110e-d0e5-4af3-aece-0a452dc2225e",
+      "name": "Send a text message1",
+      "webhookId": "YOUR_WEBHOOK_ID",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_DOCUMENT_ID",
+          "mode": "list",
+          "cachedResultName": "CUSTOMER DATA",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_DOCUMENT_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Customer_Information",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_DOCUMENT_ID/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Name": "={{ $('format data').item.json.customer_name }}",
+            "Email": "={{ $('format data').item.json.customer_email }}",
+            "Phone": "={{ $('format data').item.json.phone }}",
+            "Addresses": "={{ $('format data').item.json.address }}"
+          },
+          "matchingColumns": [
+            "Email"
+          ],
+          "schema": [
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Addresses",
+              "displayName": "Addresses",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1664,
+        -1664
+      ],
+      "id": "445e0de9-420e-4b3b-8011-c40e2138abcc",
+      "name": "Append or update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_DOCUMENT_ID",
+          "mode": "list",
+          "cachedResultName": "CUSTOMER DATA",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_DOCUMENT_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "YOUR_ORDERS_SHEET_GID",
+          "mode": "list",
+          "cachedResultName": "Orders",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_DOCUMENT_ID/edit#gid=YOUR_ORDERS_SHEET_GID"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Name": "={{ $('format data').item.json.customer_name }}",
+            "Addresses": "={{ $('format data').item.json.address }}",
+            "Email": "={{ $('format data').item.json.customer_email }}",
+            "Phone": "={{ $('format data').item.json.phone }}",
+            "Order_ID": "={{ $('format data').item.json.order_id }}",
+            "Payment_Methode": "={{ $('format data').item.json.payment_method }}",
+            "Order_item": "={{ $('WooCommerce Trigger').item.json.line_items[0].name }} x {{ $('WooCommerce Trigger').item.json.line_items[0].quantity }}",
+            "Total": "=BDT {{ $('format data').item.json.total }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Addresses",
+              "displayName": "Addresses",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Order_ID",
+              "displayName": "Order_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Order_item",
+              "displayName": "Order_item",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Payment_Methode",
+              "displayName": "Payment_Methode",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Total",
+              "displayName": "Total",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1888,
+        -1664
+      ],
+      "id": "0976c1ee-d59f-4169-9569-dd35f852069e",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -352,
+        -1328
+      ],
+      "id": "2717d60e-a635-48c8-82c2-43e3e7ce7bbf",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "resource": "order",
+        "operation": "getAll",
+        "returnAll": true,
+        "options": {
+          "after": "={{ new Date().toISOString().split('T')[0] + 'T00:00:00' }}",
+          "status": "=processing,completed"
+        }
+      },
+      "type": "n8n-nodes-base.wooCommerce",
+      "typeVersion": 1,
+      "position": [
+        -128,
+        -1328
+      ],
+      "id": "3def1fc5-e4eb-43ab-beb0-6d62671bc47f",
+      "name": "Get many orders",
+      "credentials": {
+        "wooCommerceApi": {
+          "id": "YOUR_WOOCOMMERCE_CREDENTIAL_ID",
+          "name": "WooCommerce account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const orders = items.map(item => item.json);\n\nlet totalOrders = orders.length;\nlet totalRevenue = 0;\n\nlet products = {};\n\n\nfor (const order of orders) {\n\n  totalRevenue += Number(order.total || 0);\n\n\n  for (const item of order.line_items || []) {\n\n    const name = item.name;\n    const qty = Number(item.quantity || 0);\n\n\n    if (!products[name]) {\n      products[name] = 0;\n    }\n\n\n    products[name] += qty;\n\n  }\n\n}\n\n\n// Best selling product\n\nlet bestProduct = \"No products\";\nlet bestQuantity = 0;\n\n\nfor (const product in products) {\n\n  if (products[product] > bestQuantity) {\n\n    bestProduct = product;\n    bestQuantity = products[product];\n\n  }\n\n}\n\n\n\nreturn [\n  {\n    json: {\n\n      report_date: new Date().toLocaleDateString(),\n\n      total_orders: totalOrders,\n\n      total_revenue: totalRevenue,\n\n      best_product: bestProduct,\n\n      best_product_quantity: bestQuantity,\n\n      product_sales: products\n\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        -1328
+      ],
+      "id": "a42dace7-c916-4f35-8479-69d87ee75fb3",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ JSON.stringify($json) }}",
+        "options": {
+          "systemMessage": "=You are an ecommerce sales analyst.\n\nYour task is to create a professional daily sales report from the provided JSON data.\n\nInclude:\n\n- Report date\n- Total orders\n- Total revenue\n- Best selling product\n- Product performance summary\n- Short business insight\n- Action recommendation\n\nKeep the report clean and easy to read.\n\nFormat:\nUse emojis and clear sections suitable for Telegram admin notification.\n\nImportant rules:\n\n- Currency must always be BDT (Bangladeshi Taka).\n- Never use $, USD, or any other currency.\n- Format the report for Telegram.\n- Avoid long paragraphs.\n- Keep it concise and professional.\n- Use emojis."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        320,
+        -1440
+      ],
+      "id": "bda3d807-3c4c-401b-9d3f-be8457f3a5a4",
+      "name": "AI Agent1"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini",
+          "cachedResultUrl": ""
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        400,
+        -1216
+      ],
+      "id": "26f39040-ed1d-4708-872f-0e1ae9cbb086",
+      "name": "OpenAI Chat Model1",
+      "credentials": {
+        "openAiApi": {
+          "id": "YOUR_OPENAI_CREDENTIAL_ID",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_ADMIN_CHAT_ID",
+        "text": "={{ $json.output }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        672,
+        -1328
+      ],
+      "id": "4d8b7186-23f2-4831-8c1d-7019de63002d",
+      "name": "Send a text message2",
+      "webhookId": "YOUR_WEBHOOK_ID",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "order",
+        "operation": "getAll",
+        "returnAll": true,
+        "options": {
+          "after": "={{ new Date().toISOString().split('T')[0] + 'T00:00:00' }}",
+          "status": "=processing,completed"
+        }
+      },
+      "type": "n8n-nodes-base.wooCommerce",
+      "typeVersion": 1,
+      "position": [
+        1184,
+        -848
+      ],
+      "id": "e78cd6ff-a015-4b99-82d8-f315614c8504",
+      "name": "Get many orders1",
+      "credentials": {
+        "wooCommerceApi": {
+          "id": "YOUR_WOOCOMMERCE_CREDENTIAL_ID",
+          "name": "WooCommerce account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const orders = items.map(item => item.json);\n\nlet totalOrders = orders.length;\nlet totalRevenue = 0;\n\nlet products = {};\n\n\nfor (const order of orders) {\n\n  totalRevenue += Number(order.total || 0);\n\n\n  for (const item of order.line_items || []) {\n\n    const name = item.name;\n    const qty = Number(item.quantity || 0);\n\n\n    if (!products[name]) {\n      products[name] = 0;\n    }\n\n\n    products[name] += qty;\n\n  }\n\n}\n\n\n// Best selling product\n\nlet bestProduct = \"No products\";\nlet bestQuantity = 0;\n\n\nfor (const product in products) {\n\n  if (products[product] > bestQuantity) {\n\n    bestProduct = product;\n    bestQuantity = products[product];\n\n  }\n\n}\n\n\n\nreturn [\n  {\n    json: {\n\n      report_date: new Date().toLocaleDateString(),\n\n      total_orders: totalOrders,\n\n      total_revenue: totalRevenue,\n\n      best_product: bestProduct,\n\n      best_product_quantity: bestQuantity,\n\n      product_sales: products\n\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1408,
+        -848
+      ],
+      "id": "10b8fe4c-c346-4df7-939c-7cfffbe3a0f1",
+      "name": "Code in JavaScript2"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ JSON.stringify($json) }} daily report",
+        "options": {
+          "systemMessage": "=You are an ecommerce sales analyst.\n\nYour task is to create a professional daily sales report from the provided JSON data.\n\nInclude:\n\n- Report date\n- Total orders\n- Total revenue\n- Best selling product\n- Product performance summary\n- Short business insight\n- Action recommendation\n\nKeep the report clean and easy to read.\n\nFormat:\nUse emojis and clear sections suitable for Telegram admin notification.\n\nImportant rules:\n\n- Currency must always be BDT (Bangladeshi Taka).\n- Never use $, USD, or any other currency.\n- Format the report for Telegram.\n- Avoid long paragraphs.\n- Keep it concise and professional.\n- Use emojis."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1632,
+        -848
+      ],
+      "id": "6d8f60f9-ebc5-45a0-8af4-7efacf63d60b",
+      "name": "AI Agent2"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini",
+          "cachedResultUrl": ""
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        1712,
+        -624
+      ],
+      "id": "1dc4888d-070c-48a1-a3ed-4d13802b3862",
+      "name": "OpenAI Chat Model2",
+      "credentials": {
+        "openAiApi": {
+          "id": "YOUR_OPENAI_CREDENTIAL_ID",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_ADMIN_CHAT_ID",
+        "text": "={{ $json.output }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1984,
+        -848
+      ],
+      "id": "4dbfa29e-8220-4312-8ef6-b10f1a19092d",
+      "name": "Send a text message3",
+      "webhookId": "YOUR_WEBHOOK_ID",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "months",
+              "triggerAtHour": 20
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        960,
+        -848
+      ],
+      "id": "fc50082b-531e-4a34-ad96-8ef2c92f3cf0",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "resource": "order",
+        "operation": "getAll",
+        "returnAll": true,
+        "options": {
+          "after": "={{ new Date().toISOString().split('T')[0] + 'T00:00:00' }}",
+          "status": "=processing,completed"
+        }
+      },
+      "type": "n8n-nodes-base.wooCommerce",
+      "typeVersion": 1,
+      "position": [
+        -144,
+        -848
+      ],
+      "id": "4f6bfa47-90f9-42ac-97c5-166dd7609f1a",
+      "name": "Get many orders2",
+      "credentials": {
+        "wooCommerceApi": {
+          "id": "YOUR_WOOCOMMERCE_CREDENTIAL_ID",
+          "name": "WooCommerce account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const orders = items.map(item => item.json);\n\nlet totalOrders = orders.length;\nlet totalRevenue = 0;\n\nlet products = {};\n\n\nfor (const order of orders) {\n\n  totalRevenue += Number(order.total || 0);\n\n\n  for (const item of order.line_items || []) {\n\n    const name = item.name;\n    const qty = Number(item.quantity || 0);\n\n\n    if (!products[name]) {\n      products[name] = 0;\n    }\n\n\n    products[name] += qty;\n\n  }\n\n}\n\n\n// Best selling product\n\nlet bestProduct = \"No products\";\nlet bestQuantity = 0;\n\n\nfor (const product in products) {\n\n  if (products[product] > bestQuantity) {\n\n    bestProduct = product;\n    bestQuantity = products[product];\n\n  }\n\n}\n\n\n\nreturn [\n  {\n    json: {\n\n      report_date: new Date().toLocaleDateString(),\n\n      total_orders: totalOrders,\n\n      total_revenue: totalRevenue,\n\n      best_product: bestProduct,\n\n      best_product_quantity: bestQuantity,\n\n      product_sales: products\n\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        80,
+        -848
+      ],
+      "id": "70192b5d-dc6d-4504-9024-252db1998166",
+      "name": "Code in JavaScript3"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ JSON.stringify($json) }} weekly report",
+        "options": {
+          "systemMessage": "=You are an ecommerce sales analyst.\n\nYour task is to create a professional daily sales report from the provided JSON data.\n\nInclude:\n\n- Report date\n- Total orders\n- Total revenue\n- Best selling product\n- Product performance summary\n- Short business insight\n- Action recommendation\n\nKeep the report clean and easy to read.\n\nFormat:\nUse emojis and clear sections suitable for Telegram admin notification.\n\nImportant rules:\n\n- Currency must always be BDT (Bangladeshi Taka).\n- Never use $, USD, or any other currency.\n- Format the report for Telegram.\n- Avoid long paragraphs.\n- Keep it concise and professional.\n- Use emojis."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        304,
+        -960
+      ],
+      "id": "0cb0bb90-9d15-4a10-9307-655325964e72",
+      "name": "AI Agent3"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini",
+          "cachedResultUrl": ""
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        384,
+        -736
+      ],
+      "id": "9706c586-306f-4000-b4d4-7a9425eb1546",
+      "name": "OpenAI Chat Model3",
+      "credentials": {
+        "openAiApi": {
+          "id": "YOUR_OPENAI_CREDENTIAL_ID",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_ADMIN_CHAT_ID",
+        "text": "={{ $json.output }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        656,
+        -848
+      ],
+      "id": "b783ec01-df26-4c28-918e-b67db11285d4",
+      "name": "Send a text message4",
+      "webhookId": "YOUR_WEBHOOK_ID",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtHour": 8,
+              "triggerAtMinute": {}
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -368,
+        -848
+      ],
+      "id": "8b76e315-f2b9-46c8-920d-c41be7c55fb6",
+      "name": "Schedule Trigger1"
+    },
+    {
+      "parameters": {
+        "resource": "order",
+        "operation": "getAll",
+        "returnAll": true,
+        "options": {
+          "after": "={{ new Date().toISOString().split('T')[0] + 'T00:00:00' }}",
+          "status": "=processing,completed"
+        }
+      },
+      "type": "n8n-nodes-base.wooCommerce",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        -1328
+      ],
+      "id": "f958c751-4a17-4722-b35c-2400bb38f320",
+      "name": "Get many orders3",
+      "credentials": {
+        "wooCommerceApi": {
+          "id": "YOUR_WOOCOMMERCE_CREDENTIAL_ID",
+          "name": "WooCommerce account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const orders = items.map(item => item.json);\n\nlet totalOrders = orders.length;\nlet totalRevenue = 0;\n\nlet products = {};\n\n\nfor (const order of orders) {\n\n  totalRevenue += Number(order.total || 0);\n\n\n  for (const item of order.line_items || []) {\n\n    const name = item.name;\n    const qty = Number(item.quantity || 0);\n\n\n    if (!products[name]) {\n      products[name] = 0;\n    }\n\n\n    products[name] += qty;\n\n  }\n\n}\n\n\n// Best selling product\n\nlet bestProduct = \"No products\";\nlet bestQuantity = 0;\n\n\nfor (const product in products) {\n\n  if (products[product] > bestQuantity) {\n\n    bestProduct = product;\n    bestQuantity = products[product];\n\n  }\n\n}\n\n\n\nreturn [\n  {\n    json: {\n\n      report_date: new Date().toLocaleDateString(),\n\n      total_orders: totalOrders,\n\n      total_revenue: totalRevenue,\n\n      best_product: bestProduct,\n\n      best_product_quantity: bestQuantity,\n\n      product_sales: products\n\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1424,
+        -1328
+      ],
+      "id": "bd5dd473-b9e1-4913-b63e-bf371adeed9f",
+      "name": "Code in JavaScript4"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ JSON.stringify($json) }} monthly reports",
+        "options": {
+          "systemMessage": "=You are an ecommerce sales analyst.\n\nYour task is to create a professional daily sales report from the provided JSON data.\n\nInclude:\n\n- Report date\n- Total orders\n- Total revenue\n- Best selling product\n- Product performance summary\n- Short business insight\n- Action recommendation\n\nKeep the report clean and easy to read.\n\nFormat:\nUse emojis and clear sections suitable for Telegram admin notification.\n\nImportant rules:\n\n- Currency must always be BDT (Bangladeshi Taka).\n- Never use $, USD, or any other currency.\n- Format the report for Telegram.\n- Avoid long paragraphs.\n- Keep it concise and professional.\n- Use emojis."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1648,
+        -1440
+      ],
+      "id": "8e59b26e-b312-4cc8-9743-f8befc1cb08c",
+      "name": "AI Agent4"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini",
+          "cachedResultUrl": ""
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        1728,
+        -1216
+      ],
+      "id": "9c689b81-5e8d-4783-965d-8ac9e382dc05",
+      "name": "OpenAI Chat Model4",
+      "credentials": {
+        "openAiApi": {
+          "id": "YOUR_OPENAI_CREDENTIAL_ID",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_ADMIN_CHAT_ID",
+        "text": "={{ $json.output }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2000,
+        -1328
+      ],
+      "id": "bb6f8022-7414-4990-a59f-be6f090d37c7",
+      "name": "Send a text message5",
+      "webhookId": "YOUR_WEBHOOK_ID",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtHour": 8,
+              "triggerAtMinute": {}
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        976,
+        -1328
+      ],
+      "id": "260a1b03-9578-41c0-ba85-bf501cff9e5d",
+      "name": "Schedule Trigger2"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "53eae870-5ad8-4e5e-8064-64c6f50a2ed5",
+              "leftValue": "={{ $json.output }}",
+              "rightValue": "##IMAGE_UPDATE##",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1520,
+        -2032
+      ],
+      "id": "47097f77-504c-4ee9-ba0c-51377b41b147",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.message.text }}",
+                    "rightValue": "={{ $json.message.text }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "exists",
+                      "singleValue": true
+                    },
+                    "id": "a236ff5e-1b53-4ad6-a6e5-286d50dffec9"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Text"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "609a56ce-2a6f-4af9-ba89-06dd539209f9",
+                    "leftValue": "={{ Object.keys($binary).length.toString() }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Image"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -128,
+        -2032
+      ],
+      "id": "3c268689-724d-4218-942b-869e32a2083c",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=massage: {{ $('Telegram Trigger').item.json.message.caption }}\nImage Url : {{ $('Code in JavaScript').item.json.image_url }}\nproduct some details about id or names : {{ $('AI Agent').item.json.output }}",
+        "options": {
+          "systemMessage": "=You are a WooCommerce Product Image Update Agent.\n\nYour responsibility is ONLY updating product images.\n\nAvailable tools:\n1. Get Many Products\n- Use this when user provides a product name, title, or incomplete product information.\n- Search the WooCommerce catalog and find the exact matching product.\n\n2. Get Product\n- Use this when you already have the exact product ID.\n\n3. Update Product\n- Use this ONLY after getting the correct product ID.\n\nSTRICT WORKFLOW:\n\nFor every image update request:\n\nStep 1:\nExtract:\n- Product name\n- Image URL\n\nStep 2:\nIf product ID is NOT provided:\nYou MUST call \"Get Many Products\" first.\nNever skip this step.\n\nStep 3:\nFrom Get Many Products result:\nFind the exact product matching the user requested product name.\n\nStep 4:\nUse Update Product tool with the product ID.\n\nThe update payload MUST contain:\n\n{\n  \"images\": [\n    {\n      \"src\": \"IMAGE_URL\"\n    }\n  ]\n}\n\nStep 5:\nAfter updating, call Get Product to verify.\n\nIMPORTANT RULES:\n- Never claim success without tool verification.\n- Never update without a product ID.\n- Never guess product IDs.\n- Never skip Get Many Products.\n- If no matching product is found, ask user for clarification."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1744,
+        -2288
+      ],
+      "id": "34b18a60-4029-48c2-b660-c70fe1ff037e",
+      "name": "AI Agent5"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json.output }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2096,
+        -2176
+      ],
+      "id": "a48ebb90-21a8-48be-873b-60099d08653e",
+      "name": "Send a text message6",
+      "webhookId": "YOUR_WEBHOOK_ID",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "auto",
+        "resource": "product",
+        "operation": "update",
+        "productId": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Product_ID', ``, 'string') }}",
+        "updateFields": {},
+        "dimensionsUi": {},
+        "imagesUi": {
+          "imagesValues": [
+            {
+              "alt": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('imagesValues0_Alt', ``, 'string') }}",
+              "src": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('imagesValues0_Src', ``, 'string') }}",
+              "name": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('imagesValues0_Name', ``, 'string') }}"
+            }
+          ]
+        },
+        "metadataUi": {
+          "metadataValues": []
+        }
+      },
+      "type": "n8n-nodes-base.wooCommerceTool",
+      "typeVersion": 1,
+      "position": [
+        1760,
+        -2064
+      ],
+      "id": "ac4eeb22-700f-4ff3-b0ec-e0e6d5e973db",
+      "name": "Product image update",
+      "credentials": {
+        "wooCommerceApi": {
+          "id": "YOUR_WOOCOMMERCE_CREDENTIAL_ID",
+          "name": "WooCommerce account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "returnAll": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Return_All', ``, 'boolean') }}",
+        "options": {
+          "search": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Search', ``, 'string') }}"
+        }
+      },
+      "type": "n8n-nodes-base.wooCommerceTool",
+      "typeVersion": 1,
+      "position": [
+        1888,
+        -2064
+      ],
+      "id": "4bf7d3e7-c28e-457f-b54b-980bdbc72c23",
+      "name": "Get exact products",
+      "credentials": {
+        "wooCommerceApi": {
+          "id": "YOUR_WOOCOMMERCE_CREDENTIAL_ID",
+          "name": "WooCommerce account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "AI Agent5",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a product in WooCommerce": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update a product in WooCommerce": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete a product in WooCommerce": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          },
+          {
+            "node": "AI Agent5",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a product in WooCommerce": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many products in WooCommerce": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WooCommerce Trigger": {
+      "main": [
+        [
+          {
+            "node": "format data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "format data": {
+      "main": [
+        [
+          {
+            "node": "INOICE TEMPLATE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "INOICE TEMPLATE": {
+      "main": [
+        [
+          {
+            "node": "Convert HTML to PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert HTML to PDF": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Upload file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload file": {
+      "main": [
+        [
+          {
+            "node": "Download file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download file": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "Send a text message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a text message1": {
+      "main": [
+        [
+          {
+            "node": "Append or update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append or update row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Get many orders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many orders": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent1": {
+      "main": [
+        [
+          {
+            "node": "Send a text message2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many orders1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript2": {
+      "main": [
+        [
+          {
+            "node": "AI Agent2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent2": {
+      "main": [
+        [
+          {
+            "node": "Send a text message3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent2",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get many orders1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many orders2": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript3": {
+      "main": [
+        [
+          {
+            "node": "AI Agent3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent3": {
+      "main": [
+        [
+          {
+            "node": "Send a text message4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model3": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent3",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger1": {
+      "main": [
+        [
+          {
+            "node": "Get many orders2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many orders3": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript4": {
+      "main": [
+        [
+          {
+            "node": "AI Agent4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent4": {
+      "main": [
+        [
+          {
+            "node": "Send a text message5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model4": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent4",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger2": {
+      "main": [
+        [
+          {
+            "node": "Get many orders3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "AI Agent5",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent5": {
+      "main": [
+        [
+          {
+            "node": "Send a text message6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Product image update": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent5",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get exact products": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent5",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "nodeGroups": [],
+  "tags": []
+}
